@@ -7,6 +7,7 @@ CentOS release 6.10 (Final)
 ```
 
 ### 1. install nginx
+- http://nginx.org
 ```zsh
 # vi /etc/yum.repos.d/nginx.repo
 [nginx]
@@ -25,7 +26,14 @@ nginx (pid  7320) is running...
 
 ```
 
-### 2. configure nginx 
+### 2. install nexus
+- https://www.sonatype.com
+```zsh
+# tar xzvf nexus-3.xx.x-xx-unix.tar.gz
+
+```
+
+### 3. configure nginx.conf 
 ```zsh
 # cd /etc/nginx/conf.d
 
@@ -83,4 +91,47 @@ server {
     #location ~ /\.ht {
     #    deny  all;
     #}
+    
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/nexus.abc.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/nexus.abc.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+
+server {
+    if ($host = nexus.abc.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    server_name  nexus.abc.com;
+    listen 80;
+    return 404; # managed by Certbot
+
+
+}    
+```
+
+### 4. configure nexus-default.properties
+```zsh
+# vi nexus-3.xx.x-xx/etc/nexus-default.properties
+## DO NOT EDIT - CUSTOMIZATIONS BELONG IN $data-dir/etc/nexus.properties
+##
+# Jetty section
+application-port=8081
+application-host=0.0.0.0
+nexus-args=${jetty.etc}/jetty.xml,${jetty.etc}/jetty-http.xml,${jetty.etc}/jetty-requestlog.xml
+nexus-context-path=/
+
+# Nexus section
+nexus-edition=nexus-pro-edition
+nexus-features=\
+ nexus-pro-feature
+
+nexus.hazelcast.discovery.isEnabled=true
+
+# cd nexus/bin
+# ./nexus start
 ```
